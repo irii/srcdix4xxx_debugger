@@ -5,7 +5,7 @@ import 'package:dartssh2/dartssh2.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
-import 'package:srcdix4xxx_debugger/bit_bask.dart';
+import 'package:srcdix4xxx_debugger/bit_mask.dart';
 import 'package:srcdix4xxx_debugger/bloc/CommunicatorBloc.dart';
 import 'package:srcdix4xxx_debugger/bloc/RegistersBloc.dart';
 import 'package:srcdix4xxx_debugger/communicator.dart';
@@ -104,7 +104,7 @@ class _MyHomePageState extends State<MyHomePage> {
   Iterable<RegType> _filter(Iterable<RegType> input) {
     if (filter.isNotEmpty) {
       final search = filter.toUpperCase();
-      input = input.where((element) => element.label.toUpperCase().contains(search));
+      input = input.where((element) => "${element.label} 0X${element.register.toRadixString(16)}".toUpperCase().contains(search));
     }
 
     if (readOnly) {
