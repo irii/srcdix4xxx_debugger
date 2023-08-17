@@ -28,6 +28,12 @@ class RegisterReadEvent extends RegisterEvent {
   RegisterReadEvent({this.registers});
 }
 
+class RegisterCommandEvent extends RegisterEvent {
+  final int register;
+  final int value;
+  RegisterCommandEvent(this.register, this.value);
+}
+
 class RegisterWriteEvent extends RegisterEvent {
   final List<int>? registers;
   RegisterWriteEvent({this.registers});
@@ -47,10 +53,20 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
     on<RegisterChangeEvent>(_onRegisterChangeEvent);
     on<RegisterReadEvent>(_onRegisterReadAllEvent);
     on<RegisterWriteEvent>(_onRegisterWriteAllEvent);
+    on<RegisterCommandEvent>(_onRegisterCommandEvent);
 
     _communicatorBloc.stream.listen((event) {
       add(RegisterReadEvent());
     });
+  }
+
+  void _onRegisterCommandEvent(RegisterCommandEvent event, Emitter<RegisterState> emit) async {
+    final communicatorState = _communicatorBloc.state.current;
+    if (communicatorState == null) return;
+
+    emit(RegisterLoadingState(communicatorState.deviceValues, communicatorState.deviceInfo.registers));
+    await communicatorState.writeToDevice(event.register, event.value, false);
+    emit(RegisterChangedState(communicatorState.deviceValues, communicatorState.deviceInfo.registers));
   }
 
   void _onRegisterReadAllEvent(RegisterReadEvent event, Emitter<RegisterState> emit) async {
@@ -59,7 +75,7 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
 
     emit(RegisterLoadingState(communicatorState.deviceValues, communicatorState.deviceInfo.registers));
     await communicatorState.readAll(event.registers);
-    emit(RegisterChangedState(communicatorState.deviceValues, communicatorState.deviceInfo.registers));
+    emit(RegisterChangedState(Map.from(communicatorState.deviceValues), communicatorState.deviceInfo.registers));
   }
 
   void _onRegisterWriteAllEvent(RegisterWriteEvent event, Emitter<RegisterState> emit) async {
@@ -76,13 +92,12 @@ class RegisterBloc extends Bloc<RegisterEvent, RegisterState> {
     final communicatorState = _communicatorBloc.state.current;
     if (communicatorState == null) return;
 
-    emit(RegisterLoadingState(communicatorState.deviceValues, communicatorState.deviceInfo.registers));
-
     for (var entry in event.values.entries) {
       communicatorState.deviceValues[entry.key] = entry.value;
     }
 
     if (event.instantUpdate) {
+      emit(RegisterLoadingState(communicatorState.deviceValues, communicatorState.deviceInfo.registers));
       await communicatorState.writeAll(event.values.keys.toList());
     }
 

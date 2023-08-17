@@ -56,10 +56,7 @@ class _MyHomePageState extends State<MyHomePage> {
 
   String filter = "";
 
-  int device = 0x70;
-
-  void changeDevice(BuildContext context, int deviceAddress, Device? device) {
-    this.device = deviceAddress;
+  void changeDevice(BuildContext context, int deviceAddress, Device? device, bool stub) {
     if (device == null) {
       BlocProvider
           .of<CommunicatorBloc>(context)
@@ -67,11 +64,18 @@ class _MyHomePageState extends State<MyHomePage> {
 
       return;
     }
-
-    final communicator = SshI2cCommunicator(sshI2C, deviceAddress, deviceInfo: device);
-    BlocProvider
-        .of<CommunicatorBloc>(context)
-        .add(CommunicatorChangeEvent(communicator));
+    
+    if (stub) {
+      final communicator = StubCommunicator(deviceInfo: device, deviceId: deviceAddress);
+      BlocProvider
+          .of<CommunicatorBloc>(context)
+          .add(CommunicatorChangeEvent(communicator));
+    } else {
+      final communicator = SshI2cCommunicator(sshI2C, deviceAddress, deviceInfo: device, deviceId: deviceAddress);
+      BlocProvider
+          .of<CommunicatorBloc>(context)
+          .add(CommunicatorChangeEvent(communicator));
+    }
   }
 
   @override
@@ -89,6 +93,9 @@ class _MyHomePageState extends State<MyHomePage> {
           final entries = state.current!.deviceInfo.commands.map((e) => PopupMenuItem<RegCommand>(
             value: e,
             child: Text(e.label),
+            onTap: () {
+              BlocProvider.of<RegisterBloc>(context).add(RegisterCommandEvent(e.register, e.value));
+            },
           )).toList();
 
           return PopupMenuButton<RegCommand>(
@@ -157,7 +164,7 @@ class _MyHomePageState extends State<MyHomePage> {
               color: Colors.deepPurpleAccent,
             ),
             onChanged: (Device? value) {
-              changeDevice(context, device, value);
+              changeDevice(context, state.current?.deviceId ?? 0x73, value, true);
             },
             items: [
               DropdownMenuItem<Device>(
@@ -167,7 +174,7 @@ class _MyHomePageState extends State<MyHomePage> {
               DropdownMenuItem<Device>(
                 value: Registers.DEV_DIX4192,
                 child: const Text("DIX4192"),
-              )
+              ),
             ],
           );
         }
@@ -194,22 +201,26 @@ class _MyHomePageState extends State<MyHomePage> {
           const VerticalDivider(),
           _selectDeviceDropdown(context),
           const VerticalDivider(),
-          SizedBox(
-            width: 50,
-            child: TextFormField(
-              initialValue: device.toRadixString(16),
-              decoration: const InputDecoration.collapsed(hintText: 'Address'),
-              keyboardType: TextInputType.number,
-              inputFormatters: <TextInputFormatter>[
-                FilteringTextInputFormatter.digitsOnly
-              ],
-              onChanged: (value) {
-                setState(() {
-                  device = int.parse(value, radix: 16);
-                });
-              },
-            ),
-          ),
+          BlocBuilder<CommunicatorBloc, CommunicatorState>(builder: (context, state) {
+
+
+            return SizedBox(
+              width: 50,
+              child: TextFormField(
+                initialValue: state.current?.deviceId.toRadixString(16) ?? "73",
+                decoration: const InputDecoration.collapsed(hintText: 'Address'),
+                keyboardType: TextInputType.number,
+                inputFormatters: <TextInputFormatter>[
+                  FilteringTextInputFormatter.digitsOnly
+                ],
+                onChanged: (value) {
+                  setState(() {
+                    changeDevice(context, int.parse(value, radix: 16), state.current?.deviceInfo, true);
+                  });
+                },
+              ),
+            );
+          }),
           const VerticalDivider(),
           const Text("Read-Only"),
           Checkbox(
@@ -238,8 +249,8 @@ class _MyHomePageState extends State<MyHomePage> {
                     instantUpdate = v;
                   })),
           const VerticalDivider(),
-          TextButton.icon(onPressed: () {BlocProvider.of<RegisterBloc>(context).add(RegisterReadEvent());}, icon: const Icon(Icons.upload), label: Text("Write")),
-          TextButton.icon(onPressed: () {BlocProvider.of<RegisterBloc>(context).add(RegisterWriteEvent());}, icon: const Icon(Icons.download), label: Text("Read")),
+          TextButton.icon(onPressed: () {BlocProvider.of<RegisterBloc>(context).add(RegisterWriteEvent());}, icon: const Icon(Icons.upload), label: Text("Write")),
+          TextButton.icon(onPressed: () {BlocProvider.of<RegisterBloc>(context).add(RegisterReadEvent());}, icon: const Icon(Icons.download), label: Text("Read")),
           const VerticalDivider(),
           _commandsPopupButton(context)
         ],

@@ -37,7 +37,7 @@ class SshI2C {
   Future<int> setAndGetC(SSHClient client, int device, int address,
       int value, bool readBack) async {
     final writeCommand =
-        "/sbin/i2cset -y $bus 0x${device.toRadixString(16)} 0x${address.toRadixString(16)} 0x${value.toRadixString(16)}";
+        "/sbin/i2cset -y $bus 0x${device.toRadixString(16).padLeft(2, "0")} 0x${address.toRadixString(16).padLeft(2, "0")} 0x${value.toRadixString(16).padLeft(2, "0")}";
     final writeResponse = await client.run(writeCommand, runInPty: true);
     if (writeResponse.isNotEmpty) {
       return value;
@@ -49,7 +49,7 @@ class SshI2C {
     }
 
     final readCommand =
-        "/sbin/i2cget -y $bus 0x${device.toRadixString(16)} 0x${address.toRadixString(16)}";
+        "/sbin/i2cget -y $bus 0x${device.toRadixString(16).padLeft(2, "0")} 0x${address.toRadixString(16).padLeft(2, "0")}";
     final readResponse = await client.run(readCommand, runInPty: true);
     final readResponseText = utf8.decode(readResponse);
 
@@ -63,10 +63,10 @@ class SshI2C {
   Future<void> resetDeviceC(SSHClient client, int device) async {
     // Page 1
     await client
-        .run("/sbin/i2cset -y $bus 0x${device.toRadixString(16)} 0x7F 0x00");
+        .run("/sbin/i2cset -y $bus 0x${device.toRadixString(16).padLeft(2, "0")} 0x7F 0x00");
     // Reset 1
     await client
-        .run("/sbin/i2cset -y $bus 0x${device.toRadixString(16)} 0x01 0x80");
+        .run("/sbin/i2cset -y $bus 0x${device.toRadixString(16).padLeft(2, "0")} 0x01 0x80");
   }
 
   Future<void> resetDevice(int device) async {
@@ -81,7 +81,7 @@ class SshI2C {
     final responseMap = <int, int>{};
     try {
       for (var e in registers) {
-        final command = "/sbin/i2cget -y $bus 0x${device.toRadixString(16)} 0x${e.toRadixString(16)}";
+        final command = "/sbin/i2cget -y $bus 0x${device.toRadixString(16).padLeft(2, "0")} 0x${e.toRadixString(16).padLeft(2, "0")}";
         final response = await client.run(command, runInPty: true);
 
         try {

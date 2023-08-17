@@ -18,8 +18,8 @@ class Registers {
     0x2D: "SRC Control Register 1",
     0x2E: "SRC Control Register 2",
     0x2F: "SRC Control Register 3",
-    0x30: "SRC Control Register 3",
-    0x31: "SRC Control Register 3"
+    0x30: "SRC Control Register 4",
+    0x31: "SRC Control Register 5"
   };
 
   static final List<RegCommand> _SRC4392Commands = [

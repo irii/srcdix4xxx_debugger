@@ -3,11 +3,13 @@ import 'package:srcdix4xxx_debugger/registers.dart';
 import 'package:srcdix4xxx_debugger/ssh_i2c.dart';
 
 abstract class Communicator {
+  final int deviceId;
   final Device deviceInfo;
   final Map<int, int> deviceValues = {};
 
   Communicator({
-    required this.deviceInfo
+    required this.deviceInfo,
+    required this.deviceId
   }) {
     for (var entry in deviceInfo.registers.entries) {
       deviceValues[entry.key] = 0x00;
@@ -62,7 +64,7 @@ class SshI2cCommunicator extends Communicator {
   final SshI2C sshI2C;
   final int device;
 
-  SshI2cCommunicator(this.sshI2C, this.device, {required super.deviceInfo});
+  SshI2cCommunicator(this.sshI2C, this.device, {required super.deviceInfo, required super.deviceId});
 
   SSHClient? _client;
 
@@ -103,6 +105,36 @@ class SshI2cCommunicator extends Communicator {
     }, readBack);
 
     return data[register]!;
+  }
+
+}
+
+class StubCommunicator extends Communicator {
+  StubCommunicator({required super.deviceInfo, required super.deviceId});
+
+  @override
+  Future<Map<int, int>> readAllFromDevice(Iterable<int> registers) async {
+    return Map.from(deviceValues);
+  }
+
+  @override
+  Future<int> readFromDevice(int register) async {
+    return deviceValues[register] ?? 0x00;
+  }
+
+  @override
+  Future<Map<int, int>> writeAllToDevice(Map<int, int> registers, bool readBack) async {
+    for (var entry in registers.entries) {
+      deviceValues[entry.key] = entry.value;
+    }
+
+    return Map.from(registers);
+  }
+
+  @override
+  Future<int> writeToDevice(int register, int value, bool readBack) async {
+    deviceValues[register] = value;
+    return value;
   }
 
 }
